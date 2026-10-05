@@ -1,22 +1,22 @@
 // Written By Paul Onyebuchi
-// Title: Systen Log Processor
-// Description: This program reads a log log file, counts occurences of critical hardware conditions and writes the result to a CSV file
+// Title: System Log Processor
+// Description: This program reads a log file, counts log lines with configured severity keywords and writes the result to a CSV file
 
 #include <iostream>
 #include <string>
 #include <fstream>
-using namespace std;
+//using namespace std;
 
 // Global constants
 const int SIZE = 3;
-const string INPUT_FILE_NAME = "system_dump.txt",
+const std::string INPUT_FILE_NAME = "system_dump.txt",
 OUTPUT_FILE_NAME = "error_report.csv";
-const string ERROR_WORDS[SIZE] = { "ERROR", "WARNING", "CRITICAL" }; // Words to search for
+const std::string ERROR_WORDS[SIZE] = { "ERROR", "WARNING", "CRITICAL" }; // Words to search for
 
 
 // Function prototypes
-bool processLogs(ifstream& fileStream, int [], const string []);
-void writeCSVReport(ofstream& outputStream, int[], const string[], int);
+bool processLogs(std::ifstream& fileStream, int [], const std::string []);
+bool writeCSVReport(std::ofstream& outputStream, const int[], const std::string[], int);
 
 
 int main() {
@@ -25,32 +25,43 @@ int main() {
 
 	// Reads the file system_dump.txt
 	// - open file and associate with file name
-	ifstream inputFile(INPUT_FILE_NAME);
+	std::ifstream inputFile(INPUT_FILE_NAME);
 
 	// Check if file opened
 	if (!inputFile.is_open())
 	{
-		cerr << "Failed to open file! \n";
+		std::cerr << "Failed to open file! \n";
 		return 1;
 	}
-	else
+	
+	// Search for keywords: ERROR, WARNING, CRITICAL in the log file
+	// count number of log lines containing each keyword
+	if (!processLogs(inputFile, errorCounts, ERROR_WORDS))
 	{
-		// Search for keywords: ERROR, WARNING, CRITICAL in the log file
-		// count number of times each error occurs
-		processLogs(inputFile, errorCounts, ERROR_WORDS);
-		inputFile.close();
+		std::cerr << "Failed while processing log file.\n";
+		return 2;
 	}
 
-	// Output clear summary to a file: error_report.csv
-	ofstream outputFile(OUTPUT_FILE_NAME);
+	inputFile.close();
+
+
+	// Writing log-level counts to: error_report.csv
+	// Open output report
+	std::ofstream outputFile(OUTPUT_FILE_NAME);
 
 	if (!outputFile.is_open())
 	{
-		cerr << "Failed to open output File. \n";
+		std::cerr << "Failed to open output File. \n";
 		return 1;
 	}
-	else
-		writeCSVReport(outputFile, errorCounts, ERROR_WORDS, SIZE);
+
+	// Write report
+	if (!writeCSVReport(outputFile, errorCounts, ERROR_WORDS, SIZE))
+	{
+		std::cerr << "Failed to write report";
+		return 3;
+	}
+
 	outputFile.close();
 
 
@@ -58,17 +69,16 @@ int main() {
 }
 
 // Functions
-//- This function reads the file and searches for all ocurrences of the keyword
-bool processLogs(ifstream& fileStream, int counter[], const string errorWords[])
+//- This function reads the file and searches for log lines containing a keyword
+bool processLogs(std::ifstream& fileStream, int counter[], const std::string errorWords[])
 {
-	string logLine{}; // The log will be read line-by-line rather than word-by-word
+	std::string logLevel{};
 	
-	// - Reading the file line by line
-	while (getline(fileStream, logLine))
+	while (getline(fileStream, logLevel))
 	{
-		for (int index{}; index <= SIZE - 1; index++)
+		for (int index{}; index < SIZE; ++index)
 		{
-			if (logLine.find(errorWords[index]) != string::npos)
+			if (logLevel.find(errorWords[index]) != std::string::npos)
 				// Increment the corresponding error counter array element
 				counter[index]++;
 		}
@@ -78,13 +88,14 @@ bool processLogs(ifstream& fileStream, int counter[], const string errorWords[])
 
 
 // This function creates a summary of reports from error log
-void writeCSVReport(ofstream& outputStream, int counter[], const string errorWords[], int arrSize)
+bool writeCSVReport(std::ofstream& outputStream, const int counter[], const std::string errorWords[], int arrSize)
 {
-	outputStream << "Log_error, Error_count \n";
+	outputStream << "Log_Level,Line_Count \n";
 
-	for (int index{}; index <= arrSize-1; index++)
+	for (int index{}; index < arrSize; ++index)
 	{
 		outputStream << errorWords[index] << "," << counter[index] << " \n";
 	}
+	return true;
 
 }
